@@ -4,8 +4,6 @@ on:
     branches: ["main"]
 env:
   REGISTRY: ghcr.io
-  BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/advanced-demo-backend
-  FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/advanced-demo-frontend
 jobs:
   build-and-push:
     name: Test, Build and Push Images
@@ -16,6 +14,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: Normalize GHCR image names
+        run: |
+          IMAGE_OWNER="$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')"
+          echo "BACKEND_IMAGE=ghcr.io/$IMAGE_OWNER/advanced-demo-backend" >> "$GITHUB_ENV"
+          echo "FRONTEND_IMAGE=ghcr.io/$IMAGE_OWNER/advanced-demo-frontend" >> "$GITHUB_ENV"
       - name: Test backend
         working-directory: backend
         run: |
@@ -48,6 +51,12 @@ jobs:
       - name: Checkout repository
         if: ${{ env.KUBE_CONFIG_B64 != '' }}
         uses: actions/checkout@v4
+      - name: Normalize GHCR image names
+        if: ${{ env.KUBE_CONFIG_B64 != '' }}
+        run: |
+          IMAGE_OWNER="$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')"
+          echo "BACKEND_IMAGE=ghcr.io/$IMAGE_OWNER/advanced-demo-backend" >> "$GITHUB_ENV"
+          echo "FRONTEND_IMAGE=ghcr.io/$IMAGE_OWNER/advanced-demo-frontend" >> "$GITHUB_ENV"
       - name: Configure kubeconfig
         if: ${{ env.KUBE_CONFIG_B64 != '' }}
         run: |
@@ -56,8 +65,8 @@ jobs:
       - name: Replace local image names with registry images
         if: ${{ env.KUBE_CONFIG_B64 != '' }}
         run: |
-          sed -i "s|sre-backend:v1|ghcr.io/${{ github.repository_owner }}/advanced-demo-backend:${{ github.sha }}|g" k8s/backend-deployment.yaml
-          sed -i "s|sre-frontend:v1|ghcr.io/${{ github.repository_owner }}/advanced-demo-frontend:${{ github.sha }}|g" k8s/frontend-deployment.yaml
+          sed -i "s|sre-backend:v1|$BACKEND_IMAGE:${{ github.sha }}|g" k8s/backend-deployment.yaml
+          sed -i "s|sre-frontend:v1|$FRONTEND_IMAGE:${{ github.sha }}|g" k8s/frontend-deployment.yaml
           sed -i "s|imagePullPolicy: Never|imagePullPolicy: IfNotPresent|g" k8s/backend-deployment.yaml
           sed -i "s|imagePullPolicy: Never|imagePullPolicy: IfNotPresent|g" k8s/frontend-deployment.yaml
       - name: Deploy manifests
