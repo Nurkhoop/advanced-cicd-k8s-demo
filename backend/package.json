@@ -1,0 +1,14 @@
+{
+  "name": "sre-backend-service",
+  "version": "1.0.0",
+  "description": "Backend microservice for Advanced CI/CD and Kubernetes SRE lecture",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node -e \"console.log('Backend smoke test passed')\""
+  },
+  "dependencies": {
+    "cors": "2.8.6",
+    "express": "4.22.1"
+  }
+}

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Advanced CI/CD + Kubernetes Demo</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #f4f6f8; color: #111827; }
+    header { background: #111827; color: white; padding: 28px 40px; }
+    main { max-width: 900px; margin: 40px auto; padding: 0 20px; }
+    .card { background: white; border-radius: 14px; padding: 28px; box-shadow: 0 10px 28px rgba(0,0,0,0.08); margin-bottom: 20px; }
+    button { background: #2563eb; color: white; border: none; border-radius: 8px; padding: 12px 18px; font-size: 15px; cursor: pointer; margin-right: 8px; }
+    button.secondary { background: #4b5563; }
+    pre { background: #111827; color: #e5e7eb; border-radius: 10px; padding: 16px; overflow-x: auto; min-height: 80px; }
+    .note { color: #4b5563; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <header><h1>Advanced CI/CD + Kubernetes Demo</h1><p>Frontend calls a backend microservice through Nginx reverse proxy.</p></header>
+  <main>
+    <section class="card">
+      <h2>Application Demo</h2>
+      <p class="note">This frontend is served by Nginx. JavaScript calls <code>/api/message</code>, and Nginx proxies it to the backend service.</p>
+      <button onclick="callBackend()">Call Backend</button>
+      <button class="secondary" onclick="checkHealth()">Check Health</button>
+      <h3>Response:</h3><pre id="output">Click a button to call backend...</pre>
+    </section>
+    <section class="card">
+      <h2>SRE Learning Point</h2>
+      <p class="note">In Docker Compose, <b>backend</b> is a service name. In Kubernetes, <b>backend</b> is a Service name. This keeps app networking consistent.</p>
+    </section>
+  </main>
+  <script>
+    async function callBackend() { await callApi('/api/message'); }
+    async function checkHealth() { await callApi('/api/health'); }
+    async function callApi(path) {
+      const output = document.getElementById('output');
+      try { const response = await fetch(path); const data = await response.json(); output.textContent = JSON.stringify(data, null, 2); }
+      catch (error) { output.textContent = 'Error calling backend: ' + error.message; }
+    }
+  </script>
+</body>
+</html>

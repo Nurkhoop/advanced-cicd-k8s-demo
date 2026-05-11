@@ -1,0 +1,17 @@
+.DS_Store
+node_modules/
+npm-debug.log*
+.env
+.env.*
+!.env.example
+
+# Local Kubernetes and cloud credentials
+.kube/
+*.kubeconfig
+gcloud-*.json
+
+# Build and editor output
+dist/
+build/
+.idea/
+.vscode/

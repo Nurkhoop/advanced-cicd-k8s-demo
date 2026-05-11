@@ -1,0 +1,21 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    image: sre-backend:local
+    container_name: sre-backend
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: "3000"
+      APP_VERSION: "local"
+
+  frontend:
+    build:
+      context: ./frontend
+    image: sre-frontend:local
+    container_name: sre-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend

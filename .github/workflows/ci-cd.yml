@@ -1,0 +1,68 @@
+name: Advanced CI/CD to Kubernetes
+on:
+  push:
+    branches: ["main"]
+env:
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/advanced-demo-backend
+  FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/advanced-demo-frontend
+jobs:
+  build-and-push:
+    name: Test, Build and Push Images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Test backend
+        working-directory: backend
+        run: |
+          npm ci
+          npm test
+      - name: Login to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Build backend image
+        run: docker build -t $BACKEND_IMAGE:${{ github.sha }} -t $BACKEND_IMAGE:latest ./backend
+      - name: Build frontend image
+        run: docker build -t $FRONTEND_IMAGE:${{ github.sha }} -t $FRONTEND_IMAGE:latest ./frontend
+      - name: Push backend image
+        run: |
+          docker push $BACKEND_IMAGE:${{ github.sha }}
+          docker push $BACKEND_IMAGE:latest
+      - name: Push frontend image
+        run: |
+          docker push $FRONTEND_IMAGE:${{ github.sha }}
+          docker push $FRONTEND_IMAGE:latest
+  deploy:
+    name: Deploy to Kubernetes
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    env:
+      KUBE_CONFIG_B64: ${{ secrets.KUBE_CONFIG }}
+    steps:
+      - name: Skip deploy when KUBE_CONFIG is not configured
+        if: ${{ env.KUBE_CONFIG_B64 == '' }}
+        run: echo "KUBE_CONFIG secret is empty. Images were built and pushed, deployment was skipped."
+      - name: Checkout repository
+        if: ${{ env.KUBE_CONFIG_B64 != '' }}
+        uses: actions/checkout@v4
+      - name: Configure kubeconfig
+        if: ${{ env.KUBE_CONFIG_B64 != '' }}
+        run: |
+          mkdir -p $HOME/.kube
+          echo "$KUBE_CONFIG_B64" | base64 -d > $HOME/.kube/config
+      - name: Replace local image names with registry images
+        if: ${{ env.KUBE_CONFIG_B64 != '' }}
+        run: |
+          sed -i "s|sre-backend:v1|ghcr.io/${{ github.repository_owner }}/advanced-demo-backend:${{ github.sha }}|g" k8s/backend-deployment.yaml
+          sed -i "s|sre-frontend:v1|ghcr.io/${{ github.repository_owner }}/advanced-demo-frontend:${{ github.sha }}|g" k8s/frontend-deployment.yaml
+          sed -i "s|imagePullPolicy: Never|imagePullPolicy: IfNotPresent|g" k8s/backend-deployment.yaml
+          sed -i "s|imagePullPolicy: Never|imagePullPolicy: IfNotPresent|g" k8s/frontend-deployment.yaml
+      - name: Deploy manifests
+        if: ${{ env.KUBE_CONFIG_B64 != '' }}
+        run: |
+          kubectl apply -f k8s/
+          kubectl rollout status deployment/backend
+          kubectl rollout status deployment/frontend
